@@ -3,7 +3,6 @@ data_fetcher.py
 Functions for fetching TMDB data for analysis.
 """
 
-
 import pandas as pd
 import requests
 
