@@ -56,8 +56,3 @@ The analysis provides insights into:
 - Budget vs revenue relationships
 - Genre performance metrics
 - Director success metrics
-
-## Future Enhancements
-- Expand dataset with more movies
-- Implement more sophisticated visualizations
-- Add predictive modeling
