@@ -1,0 +1,7 @@
+.env
+logs/
+data/
+__pycache__/
+*.pyc
+mysql_data/
+postgres_data/
