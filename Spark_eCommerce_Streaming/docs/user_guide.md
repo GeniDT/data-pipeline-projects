@@ -1,91 +1,141 @@
-## User Guide: Ecommerce Streaming Pipeline
+## User Guide: Real-Time Data Ingestion Pipeline
+This guide provides instructions to set up and run the real-time e-commerce data pipeline using Docker, Apache Spark Structured Streaming, and PostgreSQL.
+Prerequisites
 
-This guide provides step-by-step instructions to set up and run the Ecommerce Streaming Pipeline, a real-time data processing system that ingests, processes, and stores ecommerce event data using Apache Spark Streaming and PostgreSQL. The project is containerized with Docker for portability and isolation.
+Docker: Install Docker Desktop (Windows) and Docker Compose (version 3.8+).
+Project Files:Spark_eCommerce_Streaming/
+├── scripts/
+│   ├── data_generator.py
+│   ├── spark_streaming_to_postgres.py
+│   ├── postgres_setup.sql
+│   ├── entry.sh
+├── docs/
+│   ├── user_guide.md (this file)
+│   ├── project_overview.md
+│   ├── test_cases.md
+│   ├── performance_metrics.md
+├── data/
+│   ├── csv/
+│   ├── checkpoints/
+│   ├── postgres/
+├── logs/
+├── docker-compose.yml
+├── Dockerfile.spark
+├── Dockerfile.data-generator
+├── .env
 
-## Prerequisites
 
-Before proceeding, ensure the following are installed on your system:
 
-Docker: Version 20.10 or higher.
+## Setup Instructions
 
-Docker Compose: Version 1.29 or higher.
+Create .env File with Postgres credentials
 
-Python: Version 3.8 or higher with a virtual environment.
+Add to .gitignore:echo .env >> .gitignore
 
-Git: For cloning the project repository.
 
-## Step-by-Step Instructions
+## Set Up Directories
 
-1. Clone or Download the Project
-Clone the repository or download the project files:
+Create:mkdir scripts,docs,data\csv,data\checkpoints,data\postgres,logs
 
-git clone https://github.com/Eugenia-DE/data-portfolio
-cd spark_ecommerce_streaming
 
-2. Set Up the Python Virtual Environment
-Create and activate a virtual environment:
-python -m venv venv
-.\venv\Scripts\activate
-Install required Python dependencies (e.g., pandas for data_generator.py).
+Create Entry Script
 
-3. Configure PostgreSQL Credentials
-The project uses PostgreSQL to store event data.
-Open docker-compose.yml in a text editor.
-Update the environment section under both postgres and spark services with your preferred credentials.
+Start Containers
 
-4. Start Docker Containers
-Launch the Spark and PostgreSQL containers:
-docker-compose up -d
+Navigate to project root:cd $env:USERPROFILE\OneDrive\Desktop\Data_Engineer_Amalitech\LABS\Spark_eCommerce_Streaming
 
-Verify the containers are running:
-docker ps
-Expect to see spark_ecommerce_streaming-spark-1 and spark_ecommerce_streaming-postgres-1 with status Up.
 
-6. Initialize the Database
-Create the events table in your PostgreSQL database:
-docker exec -it spark_ecommerce_streaming-postgres-1 psql -U <your_username> -d <your_database_name>
-At the prompt, run:
-CREATE TABLE events (
-    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    user_id TEXT NOT NULL,
-    product_id TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    PRIMARY KEY (timestamp, user_id, product_id, event_type)
-);
-\d events
-\q
+Build and start:docker-compose -f docker-compose.yml up -d --build
 
-6. Start the Data Generator
-Generate synthetic ecommerce event data:
-python scripts/data_generator.py
-Expected output:
-Starting continuous data generation (press Ctrl+C to stop)...
-Generated 10 events in data_stream\events_20250502_XXXXXX_X.csv
-Keep this running in one terminal window.
 
-7. Run the Spark Streaming Job
-Submit the Spark job to process the data and write it to PostgreSQL:
-docker exec -it spark_ecommerce_streaming-spark-1 bash
-Inside the container, run:
-/opt/bitnami/spark/bin/spark-submit \
-  --master spark://spark:7077 \
-  --jars /opt/bitnami/spark/jars/postgresql-42.7.4.jar \
-  /opt/bitnami/spark/scripts/spark_streaming_to_postgres.py
-Monitor the output for StreamingQuery Started and file processing messages.
-Keep this running in another terminal window.
+Verify:docker ps
 
-8. Verify Data in PostgreSQL
-Check the number of events in the events table:
-docker exec -it spark_ecommerce_streaming-postgres-1 psql -U <your_username> -d <your_database_name> -c "SELECT COUNT(*) FROM events;"
-Expected output: A non-zero count (e.g., 10, 20, etc.) after a few seconds.
 
-View sample data:
-docker exec -it spark_ecommerce_streaming-postgres-1 psql -U <your_username> -d <your_database_name> -c "SELECT * FROM events LIMIT 5;"
 
-9. Stop the Pipeline
-Stop the Spark job by pressing Ctrl+C, then:
-exit
 
-10. Stop the data generator by pressing Ctrl+C in its terminal window.
-Stop and remove the containers:
-docker-compose down
+## Verify PostgreSQL
+
+Check table:docker exec -it postgres psql -U admin -d ecommerce -c "\d user_events"
+
+
+Run Data Generator
+
+Check logs:cat logs\data_generator.log
+
+
+Verify CSVs:dir data\csv\
+
+
+Stop:docker stop data-generator
+
+
+
+
+## Verify Spark Job
+
+Check logs:docker logs spark
+cat logs\spark_streaming.log
+
+
+
+
+## Verify Database
+
+Check rows:docker exec -it postgres psql -U admin -d ecommerce -c "SELECT COUNT(*) FROM user_events"
+
+
+View data:docker exec -it postgres psql -U admin -d ecommerce -c "SELECT * FROM user_events LIMIT 10"
+
+
+
+
+
+## Troubleshooting
+
+Verify data_generator.py produces valid data. Rebuild:docker-compose -f docker-compose.yml down -v
+docker-compose -f docker-compose.yml build --no-cache spark data-generator
+docker-compose -f docker-compose.yml up -d --build
+
+Check:docker logs spark
+cat logs\spark_streaming.log
+
+
+Spark Container Exits with Permission Denied:
+Symptom: cp: cannot create regular file '/app/spark_streaming_to_postgres.py': Permission denied.
+Fix: Ensure Dockerfile.spark sets permissions:RUN chmod +x /app/entry.sh && \
+    chown 1001:1001 /app /scripts /scripts/spark_streaming_to_postgres.py /app/entry.sh && \
+    chmod 755 /app /scripts && \
+    chmod 644 /scripts/spark_streaming_to_postgres.py
+
+
+
+
+No Spark Logs:
+Symptom: logs\spark_streaming.log missing.
+Fix: Check:docker logs spark
+
+
+
+
+NumPy/Pandas Incompatibility:
+Symptom: ValueError: numpy.dtype size changed.
+Fix: Ensure Dockerfile.data-generator pins numpy==1.24.3.
+
+
+
+
+
+
+## Verification
+
+CSV Files: Check logs\data_generator.log and data/csv/*.csv.
+Transformations: Check logs/spark_streaming.log for sample rows.
+Database Writes: Confirm row count.
+Performance: Time Spark job.
+
+## Cleanup
+
+Stop:docker-compose -f docker-compose.yml down
+
+
+Remove volumes:docker volume rm config_postgres-data config_csv-data config_spark-checkpoints
