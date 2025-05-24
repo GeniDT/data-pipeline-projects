@@ -1,6 +1,7 @@
 ## Test Cases: Real-Time Data Ingestion Pipeline
 This document outlines manual test cases to verify the functionality of the real-time e-commerce data pipeline. Each test case includes a description, steps, expected outcome, actual outcome and pass/fail criteria. The pipeline continuously generates CSV files, processes them with Spark Structured Streaming, and stores events in a PostgreSQL database.
-Test Case 1: Docker Containers Start Successfully
+
+## Test Case 1: Docker Containers Start Successfully
 Description: Verify that all Docker containers (PostgreSQL, Spark, data generator) start without errors.
 Steps:
 
@@ -26,7 +27,7 @@ CONTAINER ID   IMAGE
 Pass: All three containers are running (docker ps shows "Up").
 Fail: Any container is missing or exited.
 
-Test Case 2: PostgreSQL Database and Table Created
+## Test Case 2: PostgreSQL Database and Table Created
 Description: Verify that the ecommerce database and user_events table are created with the correct schema.
 Steps:
 
@@ -63,7 +64,7 @@ Pass/Fail Criteria:
 Pass: Table exists with correct columns and constraints.
 Fail: Table missing, incorrect schema, or missing constraints.
 
-Test Case 3: Data Generator Produces Continuous CSV Files
+## Test Case 3: Data Generator Produces Continuous CSV Files
 Description: Verify that data_generator.py continuously generates CSV files with the correct schema.
 Steps:
 
@@ -94,7 +95,7 @@ Pass/Fail Criteria:
 Pass: ~100 files after 200 seconds, correct schema, no nulls.
 Fail: Significantly fewer files, incorrect schema, or null values.
 
-Test Case 4: Spark Detects and Processes CSV Files
+## Test Case 4: Spark Detects and Processes CSV Files
 Description: Verify that the Spark job detects and processes CSV files with maxFilesPerTrigger=10.
 Steps:
 
@@ -123,7 +124,7 @@ Pass/Fail Criteria:
 Pass: ~100 files processed, ~10 batches logged, no files remain.
 Fail: Files not processed, incorrect batch count, or errors in logs.
 
-Test Case 5: Data Transformations Are Correct
+## Test Case 5: Data Transformations Are Correct
 Description: Verify that Spark applies the specified transformations (null removal, action validation, timestamp casting).
 Steps:
 
@@ -158,7 +159,7 @@ Pass/Fail Criteria:
 Pass: No nulls, only valid actions, timestamp as valid timestamps.
 Fail: Null values, invalid actions, or incorrect timestamp format.
 
-Test Case 6: Data Written to PostgreSQL
+## Test Case 6: Data Written to PostgreSQL
 Description: Verify that events are written to the user_events table without errors.
 Steps:
 
@@ -194,7 +195,7 @@ Pass/Fail Criteria:
 Pass: ~5,000 rows, unique event_id, valid created_at, no errors.
 Fail: Incorrect row count, duplicate event_id, or write errors.
 
-Test Case 7: Logging to Files
+## Test Case 7: Logging to Files
 Description: Verify that all logging occurs in files, not the console.
 Steps:
 
@@ -229,7 +230,7 @@ Pass/Fail Criteria:
 Pass: Logs in files, minimal console output.
 Fail: Missing log entries or excessive console output.
 
-Test Case 8: Error Handling
+## Test Case 8: Error Handling
 Description: Verify that the pipeline handles errors (e.g., invalid CSV, database connection failure) and logs them.
 Steps:
 
