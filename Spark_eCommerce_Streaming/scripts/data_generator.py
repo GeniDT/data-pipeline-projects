@@ -1,64 +1,76 @@
-# Python script to generate continuous CSV event data.
-
-# Import all necessary libraries
-import csv
+import pandas as pd
+from faker import Faker
+import os
+import time
+import logging
 import random
 from datetime import datetime
-from faker import Faker
-import time
-import os
-import signal
-import sys
+import pickle
 
-# Initialize Faker
-fake = Faker()
+# Configure logging
+logging.basicConfig(
+    filename='/logs/data_generator.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Global variables
-product_ids = [f'product_{i}' for i in range(1, 21)]
-event_types = ["view", "purchase"]
-output_directory = 'data_stream'
+def get_next_event_id(counter_file='/csv-data/event_id_counter.pkl'):
+    """Read and increment the event_id counter from a file."""
+    try:
+        if os.path.exists(counter_file):
+            with open(counter_file, 'rb') as f:
+                counter = pickle.load(f)
+        else:
+            counter = 0
+        counter += 1
+        with open(counter_file, 'wb') as f:
+            pickle.dump(counter, f)
+        logger.info(f"Generated event_id: {counter}")
+        return counter
+    except Exception as e:
+        logger.error(f"Failed to manage event_id counter: {str(e)}")
+        raise e
 
-def generate_event():
-    timestamp = datetime.now().isoformat()
-    user_id = fake.uuid4()
-    product_id = random.choice(product_ids)
-    event_type = random.choice(event_types)
-    return [timestamp, user_id, product_id, event_type]
-
-def generate_and_save_batch(file_path, num_events):
-    with open(file_path, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['timestamp', 'user_id', 'product_id', 'event_type'])
-        for _ in range(num_events):
-            event = generate_event()
-            writer.writerow(event)
-    print(f"Generated {num_events} events in {file_path}")
-
-def signal_handler(sig, frame):
-    print("\nStopping continuous data generation...")
-    sys.exit(0)
+def generate_data(output_dir, num_records=100):
+    try:
+        logger.info(f"Starting data generation for {num_records} records")
+        fake = Faker()
+        actions = ['view', 'click', 'purchase', 'add_to_cart']
+        
+        data = []
+        for _ in range(num_records):
+            event_id = get_next_event_id()
+            user_id = fake.uuid4()
+            action = random.choice(actions)
+            product_id = random.randint(1, 1000)
+            timestamp = datetime.now()
+            created_at = timestamp
+            
+            data.append({
+                'event_id': event_id,
+                'user_id': user_id,
+                'action': action,
+                'product_id': product_id,
+                'timestamp': timestamp,
+                'created_at': created_at
+            })
+        
+        df = pd.DataFrame(data)
+        filename = os.path.join(output_dir, f'events_{int(time.time())}.csv')
+        df.to_csv(filename, index=False)
+        logger.info(f"Generated {num_records} records in {filename} with event_ids {data[0]['event_id']} to {data[-1]['event_id']}")
+    except Exception as e:
+        logger.error(f"Data generation failed: {str(e)}")
+        raise e
 
 if __name__ == "__main__":
-    # Set up signal handler for graceful Ctrl+C
-    signal.signal(signal.SIGINT, signal_handler)
-
-    # Create output directory
-    os.makedirs(output_directory, exist_ok=True)
-
-    # Continuous generation
-    batch_size = 10  # Number of events per file
-    interval = 2     # Seconds between files
-    file_counter = 1
-
-    print("Starting continuous data generation (press Ctrl+C to stop)...")
-    while True:
-        # Generate unique filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = os.path.join(output_directory, f'events_{timestamp}_{file_counter}.csv')
-        
-        # Generate and save batch
-        generate_and_save_batch(filename, batch_size)
-        file_counter += 1
-        
-        # Wait before generating next file
-        time.sleep(interval)
+    output_dir = os.getenv('CSV_OUTPUT_DIR', '/csv-data')
+    logger.info(f"Starting data generator with output_dir: {output_dir}")
+    try:
+        while True:
+            generate_data(output_dir)
+            time.sleep(5)
+    except Exception as e:
+        logger.error(f"Data generator loop failed: {str(e)}")
+        raise e
