@@ -1,0 +1,18 @@
+FROM python:3.9-slim
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir numpy==1.24.3 faker==19.13.0 pandas==2.0.3
+
+WORKDIR /app
+RUN mkdir -p /csv-data /logs && \
+    chown 1001:1001 /csv-data /logs && \
+    chmod 755 /csv-data /logs
+COPY scripts/data_generator.py /app/data_generator.py
+RUN chown 1001:1001 /app/data_generator.py && \
+    chmod 644 /app/data_generator.py
+USER 1001
+CMD ["python", "/app/data_generator.py"]
