@@ -1,0 +1,65 @@
+services:
+  spark:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: spark
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - CSV_OUTPUT_DIR=${CSV_OUTPUT_DIR}
+    volumes:
+      - ./scripts/spark_streaming_to_postgres.py:/scripts/spark_streaming_to_postgres.py
+      - ./scripts/entry.sh:/app/entry.sh
+      - ./data/csv:/csv-data
+      - spark-checkpoints:/spark-checkpoints
+      - ./logs:/logs
+    networks:
+      - ecommerce-pipeline-net
+    depends_on:
+      - postgres
+    restart: unless-stopped
+  data-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.data-generator
+    container_name: data-generator
+    environment:
+      - CSV_OUTPUT_DIR=${CSV_OUTPUT_DIR}
+    volumes:
+      - ./scripts/data_generator.py:/app/data_generator.py
+      - ./data/csv:/csv-data
+      - ./logs:/logs
+    networks:
+      - ecommerce-pipeline-net
+    depends_on:
+      - postgres
+    restart: unless-stopped
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./scripts/postgres_setup.sql:/docker-entrypoint-initdb.d/postgres_setup.sql
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ecommerce-pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ecommerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+networks:
+  ecommerce-pipeline-net:
+    driver: bridge
+volumes:
+  postgres-data:
+  spark-checkpoints:
