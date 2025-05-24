@@ -1,7 +1,9 @@
-CREATE TABLE IF NOT EXISTS events (
-    timestamp TIMESTAMP,
-    user_id VARCHAR(36),
-    product_id VARCHAR(50),
-    event_type VARCHAR(20),
-    PRIMARY KEY (timestamp, user_id, product_id)
+CREATE TABLE user_events (
+    event_id INTEGER NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    product_id INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    created_at TIMESTAMP,
+    PRIMARY KEY (event_id)
 );
