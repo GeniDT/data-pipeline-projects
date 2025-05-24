@@ -1,0 +1,21 @@
+FROM bitnami/spark:3.5.0
+USER root
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    apt-get update && \
+    apt-get install -y curl && \
+    curl -o /opt/bitnami/spark/jars/postgresql-42.7.3.jar https://jdbc.postgresql.org/download/postgresql-42.7.3.jar && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+RUN useradd -u 1001 -m -d /home/spark -s /bin/bash spark && \
+    mkdir -p /scripts /app /spark-checkpoints /logs /home/spark/.ivy2 /opt/bitnami/spark/conf && \
+    chown spark:spark /home/spark /home/spark/.ivy2 /app /scripts /spark-checkpoints /logs /opt/bitnami/spark/conf && \
+    chmod 755 /home/spark /home/spark/.ivy2 /app /scripts /spark-checkpoints /logs /opt/bitnami/spark/conf
+COPY scripts/spark_streaming_to_postgres.py /scripts/spark_streaming_to_postgres.py
+COPY scripts/core-site.xml /opt/bitnami/spark/conf/core-site.xml
+COPY scripts/entry.sh /app/entry.sh
+RUN chmod +x /app/entry.sh && \
+    chown spark:spark /scripts/spark_streaming_to_postgres.py /opt/bitnami/spark/conf/core-site.xml /app/entry.sh && \
+    chmod 644 /scripts/spark_streaming_to_postgres.py /opt/bitnami/spark/conf/core-site.xml && \
+    chmod 755 /app/entry.sh
+USER spark
+ENTRYPOINT ["/app/entry.sh"]
