@@ -1,0 +1,4 @@
+pandas
+apache-airflow
+boto3
+pyarrow
